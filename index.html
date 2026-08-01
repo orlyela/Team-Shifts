@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>דיווח משמרות שבועי</title>
+    <!-- Performance Hints -->
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            position: fixed;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            height: 100%;
+            margin: 0 auto;
+            padding: 6px 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .view {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            width: 100%;
+            height: 100%;
+            padding: 2px 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .info-btn {
+            position: absolute;
+            top: 6px;
+            left: 10px;
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+            z-index: 10;
+        }
+
+        .info-btn i {
+            line-height: 1;
+        }
+
+        .info-btn:active {
+            transform: scale(0.95);
+        }
+
+        .header-section {
+            background: #ffffff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e2e8f0;
+        }
+
+        h1 {
+            font-size: 1.15rem;
+            text-align: center;
+            margin-bottom: 2px;
+            color: #0f172a;
+            font-weight: 800;
+        }
+
+        .week-subtitle {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 4px;
+            font-weight: 700;
+        }
+
+        .select-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        select {
+            width: 100%;
+            height: 38px;
+            padding: 0 10px;
+            font-size: 1rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background-color: #f8fafc;
+            appearance: none;
+            outline: none;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        select:focus {
+            border-color: #3b82f6;
+            background-color: #ffffff;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+        }
+
+        .select-wrapper::after {
+            content: '\f078';
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            pointer-events: none;
+            color: #64748b;
+            font-size: 0.75rem;
+            line-height: 1;
+        }
+
+        .loading-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 12px;
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .days-container {
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            overflow: hidden;
+            flex-grow: 1;
+            margin: 4px 0;
+            justify-content: space-evenly;
+            padding: 2px 0;
+        }
+
+        .day-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #ffffff;
+            padding: 3px 10px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .day-row:last-child {
+            border-bottom: none;
+        }
+
+        .day-label {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .options-group {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .opt-btn {
+            width: 72px;
+            height: 40px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background-color: #f8fafc;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.6rem;
+            cursor: pointer;
+            transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .opt-btn i {
+            line-height: 1;
+        }
+
+        .opt-btn:hover {
+            background-color: #f1f5f9;
+        }
+
+        .opt-btn.office.active {
+            background-color: #eff6ff;
+            border-color: #3b82f6;
+            color: #2563eb;
+            box-shadow: 0 1px 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .opt-btn.home.active {
+            background-color: #f0fdf4;
+            border-color: #22c55e;
+            color: #16a34a;
+            box-shadow: 0 1px 3px rgba(22, 163, 74, 0.15);
+        }
+
+        .opt-btn.night.active {
+            background-color: #f5f3ff;
+            border-color: #8b5cf6;
+            color: #7c3aed;
+            box-shadow: 0 1px 3px rgba(124, 58, 237, 0.15);
+        }
+
+        .opt-btn.home.restricted {
+            border-color: #ef4444;
+            color: #ef4444;
+            background-color: #fef2f2;
+        }
+
+        .opt-btn.home.restricted:hover {
+            background-color: #fee2e2;
+        }
+
+        .opt-btn.home.restricted.active {
+            background-color: #fff7ed;
+            border-color: #f97316;
+            color: #f97316;
+            box-shadow: 0 1px 3px rgba(249, 115, 22, 0.15);
+        }
+
+        .footer-section {
+            width: 100%;
+        }
+
+        .submit-btn {
+            width: 100%;
+            height: 42px;
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.05rem;
+            font-weight: 800;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+        }
+
+        .submit-btn:active {
+            background: linear-gradient(135deg, #2563eb 100%, #1d4ed8 100%);
+            transform: scale(0.99);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        /* Info Page View */
+        #infoView {
+            justify-content: space-between;
+        }
+
+        #infoView .header-section {
+            padding: 6px 10px;
+        }
+
+        #infoView .info-header-title {
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #0f172a;
+            text-align: center;
+        }
+
+        .info-card {
+            background: #ffffff;
+            padding: 6px 10px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-evenly;
+            flex-grow: 1;
+            margin: 4px 0;
+            overflow: hidden;
+        }
+
+        .info-section-title {
+            font-size: 0.8rem;
+            font-weight: 800;
+            color: #2563eb;
+            background-color: #eff6ff;
+            padding: 3px 6px;
+            border-radius: 6px;
+            text-align: center;
+            margin: 2px 0;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 2px 0;
+            border-bottom: 1px solid #f8fafc;
+            font-size: 0.82rem;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-weight: 700;
+            color: #64748b;
+        }
+
+        .info-val-group {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .info-val {
+            font-weight: 800;
+        }
+
+        .target-badge {
+            font-size: 0.7rem;
+            padding: 1px 5px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .target-badge.yes {
+            background-color: #f0fdf4;
+            color: #16a34a;
+        }
+
+        .target-badge.no {
+            background-color: #fef2f2;
+            color: #ef4444;
+        }
+
+        .back-btn {
+            width: 100%;
+            height: 40px;
+            background-color: #e2e8f0;
+            color: #334155;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 800;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-container">
+        <!-- Main View -->
+        <div id="mainView" class="view">
+            <button class="info-btn" id="infoBtn" onclick="openInfoPage()" title="מידע על העובד">
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="header-section">
+                <h1>דיווח משמרות לשבוע הבא</h1>
+                <div class="week-subtitle" id="weekDatesRange"></div>
+                <div class="select-wrapper">
+                    <select id="employeeName" onchange="fetchEmployeeSchedule()">
+                        <option value="" disabled selected>-- בחר שם עובד --</option>
+                        <option value="Angolina Mattar">Angolina Mattar</option>
+                        <option value="Carlos Salloum">Carlos Salloum</option>
+                        <option value="Johaina Swaed">Johaina Swaed</option>
+                        <option value="Mahdi Zoabi">Mahdi Zoabi</option>
+                        <option value="Mai Zbedat">Mai Zbedat</option>
+                        <option value="Malak Sabbah">Malak Sabbah</option>
+                        <option value="Maya Haddad">Maya Haddad</option>
+                        <option value="Or Shomonov">Or Shomonov</option>
+                        <option value="Ortal Fitoussi">Ortal Fitoussi</option>
+                        <option value="Pearla Deek">Pearla Deek</option>
+                        <option value="Rafael Simanduev">Rafael Simanduev</option>
+                        <option value="Rula Darawshi">Rula Darawshi</option>
+                        <option value="Sally Gharzuzi">Sally Gharzuzi</option>
+                        <option value="Shmuel Tetruashvili">Shmuel Tetruashvili</option>
+                        <option value="Suhail Mustafa">Suhail Mustafa</option>
+                        <option value="Yazan kezil">Yazan kezil</option>
+                        <option value="Arifenur Uslu">Arifenur Uslu</option>
+                        <option value="Jwana Qassis">Jwana Qassis</option>
+                        <option value="Kathryn Bachishche">Kathryn Bachishche</option>
+                        <option value="Mais Abed Elrhman">Mais Abed Elrhman</option>
+                        <option value="Mohamad Shaheen">Mohamad Shaheen</option>
+                        <option value="Tehila Nava Ben Hayoun">Tehila Nava Ben Hayoun</option>
+                        <option value="Youssef Daoud">Youssef Daoud</option>
+                    </select>
+                </div>
+                <div class="loading-container">
+                    <div id="loadingSpinner" class="spinner hidden"></div>
+                </div>
+            </div>
+
+            <div class="days-container" id="daysContainer"></div>
+
+            <div class="footer-section">
+                <button class="submit-btn" id="submitBtn" onclick="submitData()">שמור נתונים</button>
+            </div>
+        </div>
+
+        <!-- Info Page View -->
+        <div id="infoView" class="view hidden">
+            <div class="header-section">
+                <div class="info-header-title" id="infoTitle">פרטי עובד</div>
+            </div>
+            <div class="info-card" id="infoContent">
+                <div style="text-align: center; color: #64748b; font-size: 0.85rem;">טוען נתונים...</div>
+            </div>
+            <div class="footer-section">
+                <button class="back-btn" onclick="goBackToMain()">חזרה לדיווח משמרות</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden iframe for cross-origin form posting safely -->
+    <iframe name="hidden_iframe" id="hidden_iframe" class="hidden"></iframe>
+
+    <script>
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwX4E_lVTSG8KEYlddLimtyS-Gz13O_folJqP-2V5vZL0z2dg69vpPM_TyCteSkzOz28w/exec';
+        let isLoading = false;
+        let cachedInfoData = null;
+
+        async function initWeekDates() {
+            try {
+                const response = await fetch(`${scriptURL}?action=getDate`, { mode: 'cors' });
+                if (response.ok) {
+                    const textData = await response.text();
+                    try {
+                        const result = JSON.parse(textData);
+                        if (result.status === 'success' && result.dateText) {
+                            document.getElementById('weekDatesRange').innerText = result.dateText;
+                            return;
+                        }
+                    } catch (parseErr) {
+                        // If it returns raw text directly
+                        if (textData && textData.trim().length > 0 && !textData.includes('<!DOCTYPE html>')) {
+                            document.getElementById('weekDatesRange').innerText = textData.trim();
+                            return;
+                        }
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to fetch date from F1', e);
+            }
+        }
+        initWeekDates();
+
+        const days = [
+            { name: "ראשון", id: "sunday" },
+            { name: "שני", id: "monday" },
+            { name: "שלישי", id: "tuesday" },
+            { name: "רביעי", id: "wednesday" },
+            { name: "חמישי", id: "thursday" },
+            { name: "שישי", id: "friday" },
+            { name: "שבת", id: "saturday" }
+        ];
+
+        const container = document.getElementById('daysContainer');
+
+        days.forEach(day => {
+            const row = document.createElement('div');
+            row.className = 'day-row';
+            row.innerHTML = `
+                <span class="day-label">${day.name}</span>
+                <div class="options-group" data-day="${day.id}">
+                    <button type="button" class="opt-btn office" onclick="selectOption('${day.id}', 'office')" title="עובד מהמשרד">
+                        <i class="fa-solid fa-building"></i>
+                    </button>
+                    <button type="button" class="opt-btn home" onclick="selectOption('${day.id}', 'home')" title="עובד מהבית">
+                        <i class="fa-solid fa-house"></i>
+                    </button>
+                    <button type="button" class="opt-btn night" onclick="selectOption('${day.id}', 'night')" title="משמרת לילה">
+                        <i class="fa-solid fa-moon"></i>
+                    </button>
+                </div>
+            `;
+            container.appendChild(row);
+        });
+
+        const schedule = {};
+
+        function resetUI() {
+            days.forEach(day => {
+                const group = document.querySelector(`[data-day="${day.id}"]`);
+                if (group) {
+                    const buttons = group.querySelectorAll('.opt-btn');
+                    buttons.forEach(btn => btn.classList.remove('active'));
+                }
+            });
+            for (let key in schedule) {
+                delete schedule[key];
+            }
+            cachedInfoData = null;
+        }
+
+        function setHomeButtonRestricted(isRestricted) {
+            document.querySelectorAll('.opt-btn.home').forEach(btn => {
+                if (isRestricted) {
+                    btn.classList.add('restricted');
+                } else {
+                    btn.classList.remove('restricted');
+                }
+            });
+        }
+
+        async function fetchEmployeeSchedule() {
+            const name = document.getElementById('employeeName').value;
+            if (!name) return;
+
+            document.getElementById('infoBtn').style.display = 'none';
+
+            isLoading = true;
+            resetUI();
+            setHomeButtonRestricted(false);
+            
+            const spinner = document.getElementById('loadingSpinner');
+            spinner.classList.remove('hidden');
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+                const response = await fetch(`${scriptURL}?employee=${encodeURIComponent(name)}`, {
+                    mode: 'cors',
+                    signal: controller.signal
+                });
+                clearTimeout(timeoutId);
+
+                if (!response.ok) throw new Error('Network response was not ok');
+                const result = await response.json();
+                
+                if (result.restricted === true || String(result.colB).trim() === "לא") {
+                    setHomeButtonRestricted(true);
+                }
+
+                if (result.info) {
+                    cachedInfoData = result.info;
+                }
+
+                if (result.status === 'success' && result.schedule) {
+                    requestAnimationFrame(() => {
+                        for (const [dayId, type] of Object.entries(result.schedule)) {
+                            if (type) {
+                                const group = document.querySelector(`[data-day="${dayId}"]`);
+                                if (group) {
+                                    const selectedBtn = group.querySelector(`.${type}`);
+                                    if (selectedBtn) {
+                                        selectedBtn.classList.add('active');
+                                        const textMap = { 'office': 'משרד', 'home': 'בית', 'night': 'ערב' };
+                                        schedule[dayId] = textMap[type];
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                document.getElementById('infoBtn').style.display = 'flex';
+
+            } catch (error) {
+                console.error('Error fetching schedule:', error);
+                alert('שגיאה בטעינת הנתונים. אנא רענן את האתר ונסה שוב.');
+            } finally {
+                spinner.classList.add('hidden');
+                isLoading = false;
+            }
+        }
+
+        function selectOption(dayId, type) {
+            if (isLoading) return;
+
+            const name = document.getElementById('employeeName').value;
+            if (!name) {
+                alert('אנא בחר שם עובד תחילה');
+                return;
+            }
+
+            const textMap = {
+                'office': 'משרד',
+                'home': 'בית',
+                'night': 'ערב'
+            };
+
+            const val = textMap[type];
+            const group = document.querySelector(`[data-day="${dayId}"]`);
+            const buttons = group.querySelectorAll('.opt-btn');
+            const selectedBtn = group.querySelector(`.${type}`);
+            const isCurrentlyActive = selectedBtn.classList.contains('active');
+
+            buttons.forEach(btn => btn.classList.remove('active'));
+            
+            if (!isCurrentlyActive) {
+                selectedBtn.classList.add('active');
+                schedule[dayId] = val;
+            } else {
+                delete schedule[dayId];
+            }
+        }
+
+        async function submitData() {
+            if (isLoading) return;
+
+            const name = document.getElementById('employeeName').value;
+            if (!name) {
+                alert('אנא בחר שם עובד לפני השמירה');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerText = 'שומר...';
+
+            let url = `${scriptURL}?action=save&employee=${encodeURIComponent(name)}`;
+            days.forEach(day => {
+                if (schedule[day.id]) {
+                    url += `&${day.id}=${encodeURIComponent(schedule[day.id])}`;
+                }
+            });
+
+            try {
+                await fetch(url, { mode: 'no-cors' });
+                alert('הנתונים נשמרו בהצלחה!');
+            } catch (error) {
+                console.error('Error submitting data:', error);
+                alert('שגיאה בשמירת הנתונים. אנא רענן את האתר ונסה שוב.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = 'שמור נתונים';
+            }
+        }
+
+        function getGradientColor(val) {
+            const clean = String(val).trim();
+            const num = parseFloat(clean);
+            if (isNaN(num)) return '#0f172a';
+            
+            const percent = (num <= 1 && num >= 0) ? num * 100 : num;
+            const clamped = Math.max(0, Math.min(100, percent));
+            
+            if (clamped <= 65) {
+                return '#b91c1c';
+            }
+            
+            const t = (clamped - 65) / 35;
+            const hue = t * 82;
+            const lightness = 38 + (t * 4);
+            
+            return `hsl(${hue}, 70%, ${lightness}%)`;
+        }
+
+        function openInfoPage() {
+            const name = document.getElementById('employeeName').value;
+            if (!name) return;
+
+            document.getElementById('mainView').classList.add('hidden');
+            document.getElementById('infoView').classList.remove('hidden');
+            document.getElementById('infoTitle').innerText = `${name}`;
+            
+            const infoContainer = document.getElementById('infoContent');
+            
+            if (!cachedInfoData) {
+                infoContainer.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 0.85rem;">לא נמצאו נתונים עבור עובד זה. אנא רענן את האתר אם הבעיה נמשכת.</div>`;
+                return;
+            }
+
+            const formatValue = (val) => {
+                if (val === undefined || val === null) return '';
+                const clean = String(val).trim();
+                const num = parseFloat(clean);
+                if (!isNaN(num) && num <= 1 && num >= 0) {
+                    return `${Math.round(num * 100)}%`;
+                }
+                return clean;
+            };
+
+            const renderBadge = (val) => {
+                if (val === undefined || val === null) return '';
+                const clean = String(val).trim();
+                const isYes = clean === '✓' || clean.toLowerCase() === 'כן' || clean.toLowerCase() === 'yes';
+                const isNo = clean === '✗' || clean.toLowerCase() === 'לא' || clean.toLowerCase() === 'no';
+                
+                let badgeClass = 'no';
+                if (isYes) badgeClass = 'yes';
+                else if (isNo) badgeClass = 'no';
+
+                let displayVal = clean;
+                if (isYes && displayVal === '✓') displayVal = '✓';
+                if (isNo && displayVal === '✗') displayVal = '✗';
+
+                return `<span class="target-badge ${badgeClass}">${displayVal}</span>`;
+            };
+
+            const cur = cachedInfoData; 
+            const prev = cachedInfoData.monthAgo || {};
+            const older = cachedInfoData.twoMonthsAgo || {};
+
+            let htmlContent = `
+                <div class="info-section-title">שבוע נוכחי</div>
+                <div class="info-row">
+                    <span class="info-label">דירוג לקוחות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val" style="color: ${getGradientColor(cur.customerRating)}">${formatValue(cur.customerRating)}</span>
+                        ${renderBadge(cur.customerRatingTarget)}
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">דירוג מסעדות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val" style="color: ${getGradientColor(cur.restaurantRating)}">${formatValue(cur.restaurantRating)}</span>
+                        ${renderBadge(cur.restaurantRatingTarget)}
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">משך שיחה לקוחות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val">${formatValue(cur.customerCallDur)}</span>
+                        ${renderBadge(cur.customerCallDurTarget)}
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">משך שיחה מסעדות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val">${formatValue(cur.restaurantCallDur)}</span>
+                        ${renderBadge(cur.restaurantCallDurTarget)}
+                    </div>
+                </div>
+
+                <div class="info-section-title">חודש נוכחי</div>
+                <div class="info-row">
+                    <span class="info-label">דירוג לקוחות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val" style="color: ${getGradientColor(prev.customerRating)}">${formatValue(prev.customerRating)}</span>
+                        ${renderBadge(prev.customerRatingTarget)}
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">דירוג מסעדות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val" style="color: ${getGradientColor(prev.restaurantRating)}">${formatValue(prev.restaurantRating)}</span>
+                        ${renderBadge(prev.restaurantRatingTarget)}
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">משך שיחה לקוחות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val">${formatValue(prev.customerCallDur)}</span>
+                        ${renderBadge(prev.customerCallDurTarget)}
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">משך שיחה מסעדות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val">${formatValue(prev.restaurantCallDur)}</span>
+                        ${renderBadge(prev.restaurantCallDurTarget)}
+                    </div>
+                </div>
+
+                <div class="info-section-title">חודש קודם</div>
+                <div class="info-row">
+                    <span class="info-label">דירוג לקוחות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val" style="color: ${getGradientColor(older.customerRating)}">${formatValue(older.customerRating)}</span>
+                        ${renderBadge(older.customerRatingTarget)}
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">דירוג מסעדות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val" style="color: ${getGradientColor(older.restaurantRating)}">${formatValue(older.restaurantRating)}</span>
+                        ${renderBadge(older.restaurantRatingTarget)}
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">משך שיחה לקוחות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val">${formatValue(older.customerCallDur)}</span>
+                        ${renderBadge(older.customerCallDurTarget)}
+                    </div>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">משך שיחה מסעדות:</span>
+                    <div class="info-val-group">
+                        <span class="info-val">${formatValue(older.restaurantCallDur)}</span>
+                        ${renderBadge(older.restaurantCallDurTarget)}
+                    </div>
+                </div>
+            `;
+
+            infoContainer.innerHTML = htmlContent;
+        }
+
+        function goBackToMain() {
+            document.getElementById('infoView').classList.add('hidden');
+            document.getElementById('mainView').classList.remove('hidden');
+        }
+
+        document.addEventListener('touchmove', function (e) {
+            if (e.scale !== 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>

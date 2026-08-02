@@ -106,6 +106,7 @@
         .select-wrapper {
             position: relative;
             width: 100%;
+            margin-bottom: 6px;
         }
 
         select {
@@ -140,6 +141,35 @@
             color: #64748b;
             font-size: 0.75rem;
             line-height: 1;
+        }
+
+        .wfh-status-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-size: 0.95rem;
+            font-weight: 800;
+            color: #334155;
+            margin-top: 6px;
+            min-height: 24px;
+        }
+
+        .wfh-badge {
+            font-size: 1.05rem;
+            padding: 1px 10px;
+            border-radius: 5px;
+            font-weight: 900;
+        }
+
+        .wfh-badge.yes {
+            background-color: #dcfce7;
+            color: #15803d;
+        }
+
+        .wfh-badge.no {
+            background-color: #fee2e2;
+            color: #dc2626;
         }
 
         .loading-container {
@@ -244,23 +274,6 @@
             border-color: #8b5cf6;
             color: #7c3aed;
             box-shadow: 0 1px 3px rgba(124, 58, 237, 0.15);
-        }
-
-        .opt-btn.home.restricted {
-            border-color: #ef4444;
-            color: #ef4444;
-            background-color: #fef2f2;
-        }
-
-        .opt-btn.home.restricted:hover {
-            background-color: #fee2e2;
-        }
-
-        .opt-btn.home.restricted.active {
-            background-color: #fff7ed;
-            border-color: #f97316;
-            color: #f97316;
-            box-shadow: 0 1px 3px rgba(249, 115, 22, 0.15);
         }
 
         .footer-section {
@@ -429,6 +442,10 @@
                         <option value="Youssef Daoud">Youssef Daoud</option>
                     </select>
                 </div>
+                <div class="wfh-status-indicator" id="wfhIndicatorContainer" style="display: none;">
+                    <span>אישור עבודה מהבית:</span>
+                    <span id="wfhBadge" class="wfh-badge"></span>
+                </div>
                 <div class="loading-container">
                     <div id="loadingSpinner" class="spinner hidden"></div>
                 </div>
@@ -463,6 +480,9 @@
         let isLoading = false;
         let cachedInfoData = null;
 
+        // In-memory cache for fast instant switches
+        const employeeCache = {};
+
         async function initWeekDates() {
             try {
                 const response = await fetch(`${scriptURL}?action=getDate`, { mode: 'cors' });
@@ -475,7 +495,6 @@
                             return;
                         }
                     } catch (parseErr) {
-                        // If it returns raw text directly
                         if (textData && textData.trim().length > 0 && !textData.includes('<!DOCTYPE html>')) {
                             document.getElementById('weekDatesRange').innerText = textData.trim();
                             return;
@@ -534,16 +553,49 @@
                 delete schedule[key];
             }
             cachedInfoData = null;
+            document.getElementById('wfhIndicatorContainer').style.display = 'none';
         }
 
-        function setHomeButtonRestricted(isRestricted) {
-            document.querySelectorAll('.opt-btn.home').forEach(btn => {
-                if (isRestricted) {
-                    btn.classList.add('restricted');
-                } else {
-                    btn.classList.remove('restricted');
-                }
-            });
+        function updateWfhStatusDisplay(isRestricted) {
+            const indicatorContainer = document.getElementById('wfhIndicatorContainer');
+            const badge = document.getElementById('wfhBadge');
+            
+            if (isRestricted) {
+                badge.className = 'wfh-badge no';
+                badge.innerText = '✗';
+            } else {
+                badge.className = 'wfh-badge yes';
+                badge.innerText = '✓';
+            }
+            indicatorContainer.style.display = 'flex';
+        }
+
+        function applyEmployeeData(result) {
+            const isRestricted = (result.restricted === true || String(result.colB).trim() === "לא");
+            updateWfhStatusDisplay(isRestricted);
+
+            if (result.info) {
+                cachedInfoData = result.info;
+            }
+
+            if (result.status === 'success' && result.schedule) {
+                requestAnimationFrame(() => {
+                    for (const [dayId, type] of Object.entries(result.schedule)) {
+                        if (type) {
+                            const group = document.querySelector(`[data-day="${dayId}"]`);
+                            if (group) {
+                                const selectedBtn = group.querySelector(`.${type}`);
+                                if (selectedBtn) {
+                                    selectedBtn.classList.add('active');
+                                    const textMap = { 'office': 'משרד', 'home': 'בית', 'night': 'ערב' };
+                                    schedule[dayId] = textMap[type];
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            document.getElementById('infoBtn').style.display = 'flex';
         }
 
         async function fetchEmployeeSchedule() {
@@ -551,17 +603,21 @@
             if (!name) return;
 
             document.getElementById('infoBtn').style.display = 'none';
+            resetUI();
+
+            // Instant load if already cached
+            if (employeeCache[name]) {
+                applyEmployeeData(employeeCache[name]);
+                return;
+            }
 
             isLoading = true;
-            resetUI();
-            setHomeButtonRestricted(false);
-            
             const spinner = document.getElementById('loadingSpinner');
             spinner.classList.remove('hidden');
 
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 8000);
+                const timeoutId = setTimeout(() => controller.abort(), 6000);
 
                 const response = await fetch(`${scriptURL}?employee=${encodeURIComponent(name)}`, {
                     mode: 'cors',
@@ -572,33 +628,9 @@
                 if (!response.ok) throw new Error('Network response was not ok');
                 const result = await response.json();
                 
-                if (result.restricted === true || String(result.colB).trim() === "לא") {
-                    setHomeButtonRestricted(true);
-                }
-
-                if (result.info) {
-                    cachedInfoData = result.info;
-                }
-
-                if (result.status === 'success' && result.schedule) {
-                    requestAnimationFrame(() => {
-                        for (const [dayId, type] of Object.entries(result.schedule)) {
-                            if (type) {
-                                const group = document.querySelector(`[data-day="${dayId}"]`);
-                                if (group) {
-                                    const selectedBtn = group.querySelector(`.${type}`);
-                                    if (selectedBtn) {
-                                        selectedBtn.classList.add('active');
-                                        const textMap = { 'office': 'משרד', 'home': 'בית', 'night': 'ערב' };
-                                        schedule[dayId] = textMap[type];
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-
-                document.getElementById('infoBtn').style.display = 'flex';
+                // Cache the response
+                employeeCache[name] = result;
+                applyEmployeeData(result);
 
             } catch (error) {
                 console.error('Error fetching schedule:', error);

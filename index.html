@@ -472,15 +472,10 @@
         </div>
     </div>
 
-    <!-- Hidden iframe for cross-origin form posting safely -->
-    <iframe name="hidden_iframe" id="hidden_iframe" class="hidden"></iframe>
-
     <script>
         const scriptURL = 'https://script.google.com/macros/s/AKfycbwX4E_lVTSG8KEYlddLimtyS-Gz13O_folJqP-2V5vZL0z2dg69vpPM_TyCteSkzOz28w/exec';
         let isLoading = false;
         let cachedInfoData = null;
-
-        // In-memory cache for fast instant switches
         const employeeCache = {};
 
         async function initWeekDates() {
@@ -545,8 +540,7 @@
             days.forEach(day => {
                 const group = document.querySelector(`[data-day="${day.id}"]`);
                 if (group) {
-                    const buttons = group.querySelectorAll('.opt-btn');
-                    buttons.forEach(btn => btn.classList.remove('active'));
+                    group.querySelectorAll('.opt-btn').forEach(btn => btn.classList.remove('active'));
                 }
             });
             for (let key in schedule) {
@@ -605,7 +599,6 @@
             document.getElementById('infoBtn').style.display = 'none';
             resetUI();
 
-            // Instant load if already cached
             if (employeeCache[name]) {
                 applyEmployeeData(employeeCache[name]);
                 return;
@@ -617,7 +610,8 @@
 
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 6000);
+                // Increased thinking/timeout window to 20 seconds
+                const timeoutId = setTimeout(() => controller.abort(), 20000);
 
                 const response = await fetch(`${scriptURL}?employee=${encodeURIComponent(name)}`, {
                     mode: 'cors',
@@ -628,7 +622,6 @@
                 if (!response.ok) throw new Error('Network response was not ok');
                 const result = await response.json();
                 
-                // Cache the response
                 employeeCache[name] = result;
                 applyEmployeeData(result);
 
@@ -769,7 +762,7 @@
             const prev = cachedInfoData.monthAgo || {};
             const older = cachedInfoData.twoMonthsAgo || {};
 
-            let htmlContent = `
+            infoContainer.innerHTML = `
                 <div class="info-section-title">שבוע נוכחי</div>
                 <div class="info-row">
                     <span class="info-label">דירוג לקוחות:</span>
@@ -860,8 +853,6 @@
                     </div>
                 </div>
             `;
-
-            infoContainer.innerHTML = htmlContent;
         }
 
         function goBackToMain() {
